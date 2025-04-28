@@ -111,6 +111,42 @@ export default function Home() {
     setTaskList(null);
   };
 
+  const handleJobLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setJobLocation(e.target.value);
+  };
+
+  const handleDieLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDieLocation(e.target.value);
+  };
+
+  const handleDieTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setDieType(e.target.value);
+  };
+
+  const handleArtLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setArtLocation(e.target.value);
+  };
+
+  const handleMaterialTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setMaterialType(e.target.value);
+  };
+
+  const handleRenderLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRenderLocation(e.target.value);
+  };
+
+  const handleTakeToLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTakeToLocation(e.target.value);
+  };
+
+  const handlePrintSpecsLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPrintSpecsLocation(e.target.value);
+  };
+
+  const handleEmailToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmailTo(e.target.value);
+  };
+
   const handleGenerateTask = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -136,36 +172,27 @@ export default function Home() {
       // 1. Set up files for GF Device
       files.push({
         id: generateUniqueId(),
-        fileName: "1. Set up files",
-        fileLocation: "GF Device",
-        description: "Set up files for GF Device",
+        fileName: "1. Save out PDF(s) without dies",
+        fileLocation: "",
+        description: "Check to make sure the color space is correct",
         completed: false
       });
       
       // 2. Die File
       files.push({
         id: generateUniqueId(),
-        fileName: "2. Die File",
+        fileName: "2. Send to GF Device.",
         fileLocation: dieType,
-        description: "Engineering die file",
+        description: "Material: " + materialType + "\nSpecial Instructions: Take to Engineering",
         completed: false
       });
       
-      // 3. Art File
+      // 3. Email contact
       files.push({
         id: generateUniqueId(),
-        fileName: "3. Art File",
-        fileLocation: materialType,
-        description: "Material",
-        completed: false
-      });
-      
-      // 4. Render
-      files.push({
-        id: generateUniqueId(),
-        fileName: "4. Render",
-        fileLocation: takeToLocation,
-        description: "Take To location",
+        fileName: "3. Email the dies to Engineering.",
+        fileLocation: "",
+        description: "",
         completed: false
       });
       
@@ -385,7 +412,7 @@ export default function Home() {
                   type="text"
                   id="job-location"
                   value={jobLocation}
-                  onChange={(e) => setJobLocation(e.target.value)}
+                  onChange={handleJobLocationChange}
                   className="w-full rounded-md bg-background border border-accent/20 shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                   placeholder={currentPlaceholders.jobLocation}
                   required
@@ -403,7 +430,7 @@ export default function Home() {
                   <select
                     id="die-type"
                     value={dieType}
-                    onChange={(e) => setDieType(e.target.value)}
+                    onChange={handleDieTypeChange}
                     className="w-full rounded-md appearance-none bg-background border border-accent/20 shadow-sm py-2.5 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                   >
                     <option value="All Flatbeds">All Flatbeds</option>
@@ -428,7 +455,7 @@ export default function Home() {
                       type="text"
                       id="die-location"
                       value={dieLocation}
-                      onChange={(e) => setDieLocation(e.target.value)}
+                      onChange={handleDieLocationChange}
                       className="w-full rounded-md bg-background border border-accent/20 shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                       placeholder={currentPlaceholders.dieLocation}
                     />
@@ -447,7 +474,7 @@ export default function Home() {
                   <select
                     id="material-type"
                     value={materialType}
-                    onChange={(e) => setMaterialType(e.target.value)}
+                    onChange={handleMaterialTypeChange}
                     className="w-full rounded-md appearance-none bg-background border border-accent/20 shadow-sm py-2.5 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                   >
                     <option value="8oz">8oz</option>
@@ -475,7 +502,7 @@ export default function Home() {
                     type="text"
                     id="art-location"
                     value={artLocation}
-                    onChange={(e) => setArtLocation(e.target.value)}
+                    onChange={handleArtLocationChange}
                     className="w-full rounded-md bg-background border border-accent/20 shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                     placeholder={currentPlaceholders.artLocation}
                   />
@@ -493,7 +520,7 @@ export default function Home() {
                   <select
                     id="take-to-location"
                     value={takeToLocation}
-                    onChange={(e) => setTakeToLocation(e.target.value)}
+                    onChange={handleTakeToLocationChange}
                     className="w-full rounded-md appearance-none bg-background border border-accent/20 shadow-sm py-2.5 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                   >
                     <option value="Engineering">Engineering</option>
@@ -517,7 +544,7 @@ export default function Home() {
                     type="text"
                     id="render-location"
                     value={renderLocation}
-                    onChange={(e) => setRenderLocation(e.target.value)}
+                    onChange={handleRenderLocationChange}
                     className="w-full rounded-md bg-background border border-accent/20 shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                     placeholder={currentPlaceholders.renderLocation}
                   />
@@ -537,7 +564,7 @@ export default function Home() {
                     type="text"
                     id="print-specs-location"
                     value={printSpecsLocation}
-                    onChange={(e) => setPrintSpecsLocation(e.target.value)}
+                    onChange={handlePrintSpecsLocationChange}
                     className="w-full rounded-md bg-background border border-accent/20 shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                     placeholder="Enter Print Specs Location"
                   />
@@ -556,7 +583,7 @@ export default function Home() {
                     type="text"
                     id="email-to"
                     value={emailTo}
-                    onChange={(e) => setEmailTo(e.target.value)}
+                    onChange={handleEmailToChange}
                     className="w-full rounded-md bg-background border border-accent/20 shadow-sm py-2.5 px-4 focus:outline-none focus:ring-2 focus:ring-accent/30 hover:border-accent/50 transition-all duration-200"
                     placeholder={currentPlaceholders.emailTo}
                   />

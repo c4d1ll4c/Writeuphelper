@@ -1,0 +1,10 @@
+[Enter Job Folder Location]
+
+AFTER PDF APPROVAL:
+1. Save out PDF(s) without dies
+ - Check to make sure the color space is correct
+2. Send to GF Device.
+ - [All Flatbeds / All Rolls]
+ - Material: [Material]
+ - Special Notes: Take to [Take to]
+3. Email the dies to Engineering. 

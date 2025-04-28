@@ -1,0 +1,14 @@
+[Enter Job Folder Location]
+
+AFTER PDF APPROVAL:
+1. Save out PDFs for FINAL PRODUCTION.
+ - CROP THE PDFS IF NEEDED
+2. Copy the dies to the Zund hotfolder.
+3. Send the approved presslays to GF Final Production.
+- Approved Device Cap #: [Approved Device Location]
+- Email PDFs and PrintSpecs PDF can be found in the job folder.
+- Print Specs Location: [Print Specs Location]
+4. Email GF Planning, Structural Design & [Enter Email Recipients]
+5. Task Complete in Monarch
+
+FORMS: 

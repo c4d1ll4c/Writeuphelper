@@ -24,6 +24,7 @@ export interface TaskList {
   updatedAt: Date
   version: number
   templateId?: string
+  content?: string
 }
 
 export function generateUniqueId(): string {
@@ -80,8 +81,8 @@ Presslay Setup
       return `${jobFolderLocation}
 
 AFTER PDF APPROVAL:
-1. Save out PDF(s) without dies.
- - Check to make sure the color space is correct${dieLocation === 'All Flatbeds' ? '\n - CROP THE PDFS' : ''}
+1. Save out PDF(s) without dies
+ - Check to make sure the color space is correct
 2. Send to GF Device.
  - ${dieLocation}
  - Material: ${artLocation}

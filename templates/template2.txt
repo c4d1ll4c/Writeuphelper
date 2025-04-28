@@ -1,0 +1,12 @@
+[Enter Job Folder Location]
+
+Presslay Setup
+1. Pick up and process the presslay dies sent by Engineering.
+ - Location: [Enter Die Location]
+2. Build the device color approved art supplied by Premedia into the dies.
+ - Location: [Enter High-Res Art Location]
+3. Use the approved render as your FPO.
+ - Location: [Enter Render Location]
+4. Send out PDFs with the dies burned in for approval.
+ - Email to: [Enter Email Recipients]
+5. Export and setup all the dies for Zund cutting. 
