@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createWorker } from 'tesseract.js';
+import { createWorker, type WorkerOptions } from 'tesseract.js';
 import { PrismaClient } from '@prisma/client';
 import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -13,52 +13,68 @@ export async function POST(request: Request) {
 
     if (!file) {
       return NextResponse.json(
-        { error: 'No file provided' },
+        { error: 'No file uploaded' },
         { status: 400 }
       );
     }
 
-    // Save the file temporarily
+    // Convert File to Buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const filename = `${Date.now()}-${file.name}`;
-    const filepath = join(process.cwd(), 'public', 'uploads', filename);
+
+    // Save the file
+    const timestamp = Date.now();
+    const filename = `${timestamp}-${file.name}`;
+    const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
     await writeFile(filepath, buffer);
 
-    // Initialize Tesseract worker
-    const worker = await createWorker();
-    await worker.loadLanguage('eng');
-    await worker.initialize('eng');
+    // Initialize Tesseract worker with proper options
+    const workerOptions: WorkerOptions = {
+      logger: (m: any) => console.log(m),
+      errorHandler: (e: any) => console.error(e),
+      langPath: path.join(process.cwd(), 'tessdata'),
+    };
 
-    // Perform OCR
-    const { data: { text } } = await worker.recognize(filepath);
-    await worker.terminate();
+    const worker = await createWorker(workerOptions);
+    
+    try {
+      // Load language and initialize
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
 
-    // Parse the extracted text (you'll need to implement your own parsing logic)
-    const parsedData = parseExcelData(text);
+      // Perform OCR
+      const { data: { text } } = await worker.recognize(buffer);
+      
+      // Parse the extracted text (you'll need to implement your own parsing logic)
+      const parsedData = parseExcelData(text);
 
-    // Save to database
-    const image = await prisma.image.create({
-      data: {
-        url: `/uploads/${filename}`,
-      },
-    });
+      // Save to database
+      const image = await prisma.image.create({
+        data: {
+          url: `/uploads/${filename}`,
+        },
+      });
 
-    const extract = await prisma.extract.create({
-      data: {
+      const extract = await prisma.extract.create({
+        data: {
+          data: parsedData,
+          imageId: image.id,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
         data: parsedData,
-        imageId: image.id,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: parsedData,
-    });
+        filename: `/uploads/${filename}`
+      });
+    } finally {
+      // Ensure worker is terminated
+      await worker.terminate();
+    }
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Error processing file:', error);
     return NextResponse.json(
-      { error: 'Failed to process image' },
+      { error: 'Error processing file' },
       { status: 500 }
     );
   }

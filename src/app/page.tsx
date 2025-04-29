@@ -334,11 +334,16 @@ export default function Home() {
         .replace(/\[Enter Render Location\]/g, renderLocation)
         .replace(/\[Enter Email Recipients\]/g, emailTo);
     } else if (selectedTemplate === 'template3') {
+      console.log('Template 3 content before replacement:', content);
+      console.log('Material type:', materialType);
+      
       content = content
         .replace(/\[Enter Job Folder Location\]/g, jobLocation)
         .replace(/\[All Flatbeds \/ All Rolls\]/g, dieType)
         .replace(/Material: \[8oz \/ C1S \/ RTS \/ Busmark \/ Lightcal \/ Other\]/g, `Material: ${materialType}`)
         .replace(/\[Print Specs Location\]/g, printSpecsLocation);
+      
+      console.log('Template 3 content after replacement:', content);
       
       // Add conditional line for All Flatbeds
       if (dieType === 'All Flatbeds') {
