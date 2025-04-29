@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import React from 'react';
 
 export function OpenAITest() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [result, setResult] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   const testOpenAI = async () => {
     setIsLoading(true);
