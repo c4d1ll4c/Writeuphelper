@@ -44,8 +44,9 @@ const TEMPLATE_PLACEHOLDERS: Record<string, any> = {
 };
 
 export default function Home() {
-  const [selectedTemplate, setSelectedTemplate] = React.useState(TASK_TEMPLATES[0].id);
-  const [templateContent, setTemplateContent] = React.useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = React.useState('template1');
+  const [templateContent, setTemplateContent] = React.useState('');
+  const [takeTo, setTakeTo] = React.useState('Engineering');
   
   // Form state
   const [jobLocation, setJobLocation] = React.useState("");
@@ -54,10 +55,13 @@ export default function Home() {
   const [artLocation, setArtLocation] = React.useState("");
   const [materialType, setMaterialType] = React.useState("8oz");
   const [renderLocation, setRenderLocation] = React.useState("");
-  const [takeTo, setTakeTo] = React.useState("Engineering");
   const [printSpecsLocation, setPrintSpecsLocation] = React.useState("");
   const [emailTo, setEmailTo] = React.useState("");
   const [approvedDeviceLocation, setApprovedDeviceLocation] = React.useState("");
+  const [formsCreated, setFormsCreated] = React.useState(false);
+  const [screenshots, setScreenshots] = React.useState<File[]>([]);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [processingStatus, setProcessingStatus] = React.useState<string>('');
   
   const [taskList, setTaskList] = React.useState<TaskList | null>(null);
   const [copied, setCopied] = React.useState(false);
@@ -107,26 +111,55 @@ export default function Home() {
 
   const fieldLabels = getFieldLabels();
 
+  const fetchTemplate = async (templateName: string) => {
+    try {
+      console.log('Fetching template:', templateName);
+      const response = await fetch(`/api/templates?name=${templateName}`);
+      if (!response.ok) {
+        console.error('Error response from API:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
+        return;
+      }
+      const data = await response.json();
+      if (data.content) {
+        console.log('Template loaded successfully:', templateName);
+        console.log('Template content:', data.content);
+        setTemplateContent(data.content);
+      } else {
+        console.error('Template content is empty:', templateName);
+      }
+    } catch (error) {
+      console.error('Error fetching template:', error);
+    }
+  };
+
   // Fetch template content when template is selected
   React.useEffect(() => {
-    const fetchTemplate = async () => {
-      try {
-        const response = await fetch(`/api/templates?name=${selectedTemplate}`);
-        const data = await response.json();
-        if (data.content) {
-          setTemplateContent(data.content);
-        }
-      } catch (error) {
-        console.error('Error fetching template:', error);
-      }
-    };
-    fetchTemplate();
+    fetchTemplate(selectedTemplate);
   }, [selectedTemplate]);
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedTemplate(e.target.value);
-    // Reset task list when template changes
+    const newTemplate = e.target.value;
+    console.log('Template changed to:', newTemplate);
+    setSelectedTemplate(newTemplate);
+    // Clear the task list when template changes
     setTaskList(null);
+    // Reset forms created state and screenshots when switching away from template 4
+    if (newTemplate !== 'template4') {
+      setFormsCreated(false);
+      setScreenshots([]);
+      setProcessingStatus('');
+    }
+    // If template 3 is selected, we'll load the appropriate variant based on takeTo
+    if (newTemplate === 'template3') {
+      // Format the variant name to match the file name
+      const variant = takeTo === 'GF Zund' ? 'gfzund' : 'engineering';
+      console.log('Loading template 3 variant:', variant);
+      fetchTemplate(`template3-${variant}`);
+    } else {
+      fetchTemplate(newTemplate);
+    }
   };
 
   const handleJobLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,7 +187,16 @@ export default function Home() {
   };
 
   const handleTakeToChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTakeTo(e.target.value);
+    const newTakeTo = e.target.value;
+    console.log('Take to changed to:', newTakeTo);
+    setTakeTo(newTakeTo);
+    // If template 3 is selected, reload the template with the new takeTo value
+    if (selectedTemplate === 'template3') {
+      // Format the variant name to match the file name
+      const variant = newTakeTo === 'GF Zund' ? 'gfzund' : 'engineering';
+      console.log('Loading template 3 variant for takeTo change:', variant);
+      fetchTemplate(`template3-${variant}`);
+    }
   };
 
   const handlePrintSpecsLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,71 +207,206 @@ export default function Home() {
     setEmailTo(e.target.value);
   };
 
-  const handleGenerateTask = (e: React.FormEvent) => {
+  const handleFormsCreatedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormsCreated(e.target.checked);
+  };
+
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setScreenshots((prev: File[]) => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeScreenshot = (index: number) => {
+    setScreenshots((prev: File[]) => prev.filter((_: File, i: number) => i !== index));
+  };
+
+  const handleGenerateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    let extractedDataText = '';
+    
+    // Process screenshots if forms are created and screenshots are uploaded
+    if (formsCreated && screenshots.length > 0) {
+      try {
+        setIsProcessing(true);
+        setProcessingStatus(`Processing ${screenshots.length} screenshot(s) with ChatGPT...`);
+        
+        // Process each screenshot with ChatGPT
+        const processedResults = [];
+        
+        for (let i = 0; i < screenshots.length; i++) {
+          const screenshot = screenshots[i];
+          setProcessingStatus(`Processing screenshot ${i + 1} of ${screenshots.length} with ChatGPT...`);
+          
+          const formData = new FormData();
+          formData.append('file', screenshot);
+          
+          const response = await fetch('/api/process-image', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to process screenshot with ChatGPT');
+          }
+          
+          if (!result.data) {
+            throw new Error('No data returned from ChatGPT processing');
+          }
+          
+          processedResults.push(result.data);
+        }
+        
+        setProcessingStatus(`Successfully processed ${screenshots.length} screenshot(s) with ChatGPT`);
+        console.log('Processed data from ChatGPT:', processedResults);
+        
+        // Format the extracted data for the task
+        if (processedResults.length > 0) {
+          // Combine all processed results
+          processedResults.forEach((result, index) => {
+            if (index > 0) {
+              extractedDataText += '\n';
+            }
+            extractedDataText += result;
+          });
+        }
+      } catch (error) {
+        console.error('Error processing screenshots with ChatGPT:', error);
+        
+        let errorMessage = 'Error processing screenshots with ChatGPT. Please try again.';
+        
+        if (error instanceof Error) {
+          errorMessage = `Error: ${error.message}`;
+          
+          // Check for specific error types
+          if (errorMessage.includes('API key')) {
+            errorMessage = 'OpenAI API key is not configured. Please check your environment variables.';
+          } else if (errorMessage.includes('rate limit')) {
+            errorMessage = 'OpenAI API rate limit exceeded. Please try again later.';
+          }
+        }
+        
+        setProcessingStatus(errorMessage);
+        extractedDataText = `\n\nERROR: ${errorMessage}\n`;
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+    
+    // Continue with the existing task generation logic
     if (!jobLocation) {
       alert("Job location is required");
       return;
     }
 
-    // Replace placeholders in templateContent with form values
-    let filledTask = templateContent;
-    switch (selectedTemplate) {
-      case 'template1':
-        filledTask = filledTask
-          .replace(/\[Enter Job Folder Location\]/g, jobLocation)
-          .replace(/\[Enter Die Location\]/g, dieLocation)
-          .replace(/\[Enter High-Res Art Location\]/g, artLocation)
-          .replace(/\[Enter Render Location\]/g, renderLocation)
-          .replace(/\[Enter Email Recipients\]/g, emailTo);
-        break;
-      case 'template2':
-        filledTask = filledTask
-          .replace(/\[Enter Job Folder Location\]/g, jobLocation)
-          .replace(/\[Enter Die Location\]/g, dieLocation)
-          .replace(/\[Enter High-Res Art Location\]/g, artLocation)
-          .replace(/\[Enter Render Location\]/g, renderLocation)
-          .replace(/\[Enter Email Recipients\]/g, emailTo);
-        break;
-      case 'template3':
-        let template3Task = "";
-        const cropLine = dieType === 'All Flatbeds' ? '\n - CROP THE PDFs TO FIT ON THE MATERIAL' : '';
-        if (takeTo === 'Engineering') {
-          template3Task = `[Enter Job Folder Location]\n\nAFTER PDF APPROVAL:\n1. Save out PDF(s) without dies\n - Check to make sure the color space is correct${cropLine}\n2. Send to GF Device.\n - [Printer]\n - Material: [Material]\n - Special Instructions: Take to [Take to]\n3. Email the dies to Engineering.`;
-        } else if (takeTo === 'GF Zund') {
-          template3Task = `[Enter Job Folder Location]\n\nAFTER PDF APPROVAL:\n1. Save out PDF(s) without dies\n - Check to make sure the color space is correct${cropLine}\n2. Send to GF Device.\n - [Printer]\n - Material: [Material]\n - Special Instructions: Take to [Take to]  |  See Zund hotfolder for the mounting specs PDF.\n3. Copy the dies and the PrintSpecs.pdf into the Zund hotfolder for GF to mount and cut.\n - Print Specs Location: [Print Specs Location]`;
-        }
-        filledTask = template3Task
-          .replace(/\[Enter Job Folder Location\]/g, jobLocation)
-          .replace(/\[Printer\]/g, dieType)
-          .replace(/\[Material\]/g, materialType)
-          .replace(/\[Take to\]/g, takeTo)
-          .replace(/\[Print Specs Location\]/g, printSpecsLocation);
-        break;
-      case 'template4':
-        filledTask = filledTask
-          .replace(/\[Enter Job Folder Location\]/g, jobLocation)
-          .replace(/\[Approved Device Location\]/g, approvedDeviceLocation)
-          .replace(/\[Print Specs Location\]/g, printSpecsLocation)
-          .replace(/\[Enter Email Recipients\]/g, emailTo);
-        break;
-      default:
-        break;
-    }
-
-    // Generate task list with filled template
+    // Create a new task list
     const newTaskList: TaskList = {
       id: generateUniqueId(),
       title: "Task " + new Date().toLocaleDateString(),
-      files: [], // Not used for template-based output
+      files: [],
       createdAt: new Date(),
       updatedAt: new Date(),
       version: taskList ? taskList.version + 1 : 1,
       templateId: selectedTemplate,
-      content: filledTask
+      content: templateContent
     };
 
+    // Replace placeholders in the template content
+    let content = templateContent;
+    
+    // Replace placeholders based on the selected template
+    if (selectedTemplate === 'template1') {
+      content = content
+        .replace(/\[Enter Job Folder Location\]/g, jobLocation)
+        .replace(/\[Enter Die Location\]/g, dieLocation)
+        .replace(/\[Enter High-Res Art Location\]/g, artLocation)
+        .replace(/\[Enter Render Location\]/g, renderLocation)
+        .replace(/\[Enter Email Recipients\]/g, emailTo);
+    } else if (selectedTemplate === 'template2') {
+      content = content
+        .replace(/\[Enter Job Folder Location\]/g, jobLocation)
+        .replace(/\[Enter Die Location\]/g, dieLocation)
+        .replace(/\[Enter High-Res Art Location\]/g, artLocation)
+        .replace(/\[Enter Render Location\]/g, renderLocation)
+        .replace(/\[Enter Email Recipients\]/g, emailTo);
+    } else if (selectedTemplate === 'template3') {
+      content = content
+        .replace(/\[Enter Job Folder Location\]/g, jobLocation)
+        .replace(/\[All Flatbeds \/ All Rolls\]/g, dieType)
+        .replace(/Material: \[8oz \/ C1S \/ RTS \/ Busmark \/ Lightcal \/ Other\]/g, `Material: ${materialType}`)
+        .replace(/\[Print Specs Location\]/g, printSpecsLocation);
+      
+      // Add conditional line for All Flatbeds
+      if (dieType === 'All Flatbeds') {
+        content = content.replace(
+          /- Check to make sure the color space is correct/g,
+          '- Check to make sure the color space is correct\n - CROP THE PDFs TO FIT THE MATERIAL'
+        );
+      }
+    } else if (selectedTemplate === 'template4') {
+      content = content
+        .replace(/\[Enter Job Folder Location\]/g, jobLocation)
+        .replace(/\[Approved Device Location\]/g, artLocation)
+        .replace(/\[Print Specs Location\]/g, renderLocation)
+        .replace(/\[Enter Email Recipients\]/g, emailTo);
+    }
+    
+    // Add the extracted data to the content if available
+    if (extractedDataText) {
+      // Replace "GF Imposition (LA):" with "GF Print:" and "Zund Cut:" with "GF Cut:" in the extracted data
+      const modifiedDataText = extractedDataText
+        .replace(/GF Imposition \(LA\):/g, 'GF Print:')
+        .replace(/Zund Cut:/g, 'GF Cut:');
+      
+      // Process the modified data to only include GF Print section with actual data
+      let processedDataText = '';
+      
+      // Check for GF Print section
+      const gfPrintMatch = modifiedDataText.match(/GF Print:([\s\S]*?)(?=GF Cut:|$)/);
+      if (gfPrintMatch && gfPrintMatch[1].trim() && 
+          !gfPrintMatch[1].includes('(No matching rows found)') && 
+          !gfPrintMatch[1].includes('(No entries found)') &&
+          !gfPrintMatch[1].includes('There are no matches for') &&
+          !gfPrintMatch[1].includes('(No matching data for this section)')) {
+        processedDataText += 'GF Print:' + gfPrintMatch[1];
+      }
+      
+      // Only add the processed data if it contains actual content
+      if (processedDataText.trim()) {
+        // Find the position of "FORMS:" in the content
+        const formsIndex = content.indexOf('FORMS:');
+        if (formsIndex !== -1) {
+          // For template 4, ensure "GF Print:" appears directly after "FORMS:"
+          if (selectedTemplate === 'template4') {
+            // Check if the processed data contains "GF Print:"
+            const gfPrintIndex = processedDataText.indexOf('GF Print:');
+            if (gfPrintIndex !== -1) {
+              // Extract the GF Print section
+              const gfPrintSection = processedDataText.substring(gfPrintIndex);
+              // Insert the GF Print section directly after "FORMS:"
+              content = content.substring(0, formsIndex + 6) + '\n' + gfPrintSection + content.substring(formsIndex + 6);
+            } else {
+              // If no GF Print section, just insert the data as is
+              content = content.substring(0, formsIndex + 6) + processedDataText + content.substring(formsIndex + 6);
+            }
+          } else {
+            // For other templates, insert the processed data as is
+            content = content.substring(0, formsIndex + 6) + processedDataText + content.substring(formsIndex + 6);
+          }
+        } else {
+          // If "FORMS:" is not found, append the processed data at the end
+          content += processedDataText;
+        }
+      }
+    }
+    
+    newTaskList.content = content;
     setTaskList(newTaskList);
+    setCopied(false);
   };
 
   const handleCopy = (text: string) => {
@@ -462,6 +639,86 @@ export default function Home() {
             {/* Fallback for other templates (if any) */}
             {selectedTemplate !== 'template1' && selectedTemplate !== 'template2' && selectedTemplate !== 'template3' && selectedTemplate !== 'template4' && (
               <div>Unsupported template</div>
+            )}
+            
+            {/* Forms created checkbox - only shown for template 4 */}
+            {selectedTemplate === 'template4' && (
+              <div className="flex items-center mt-4">
+                <input 
+                  type="checkbox" 
+                  id="forms-created" 
+                  checked={formsCreated} 
+                  onChange={handleFormsCreatedChange} 
+                  className="h-4 w-4 text-accent focus:ring-accent border-accent/20 rounded"
+                />
+                <label htmlFor="forms-created" className="ml-2 block text-sm font-medium text-foreground">
+                  Have forms been created?
+                </label>
+              </div>
+            )}
+            
+            {formsCreated && selectedTemplate === 'template4' && (
+              <div className="mt-4 p-4 border border-accent/20 rounded-md bg-background/50">
+                <h3 className="text-lg font-medium mb-2">Upload Screenshots for Data Extraction</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Upload screenshots of your forms to extract data automatically.
+                </p>
+                
+                <div className="mb-3">
+                  <label htmlFor="screenshots" className="block text-sm font-medium text-foreground mb-1">
+                    Select Screenshots
+                  </label>
+                  <input
+                    type="file"
+                    id="screenshots"
+                    multiple
+                    accept="image/*"
+                    onChange={handleScreenshotChange}
+                    disabled={isProcessing}
+                    className="w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-accent/10 file:text-accent hover:file:bg-accent/20 disabled:opacity-50"
+                  />
+                </div>
+                
+                {isProcessing && (
+                  <div className="mt-3 p-3 bg-accent/10 rounded-md">
+                    <div className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-sm font-medium">{processingStatus}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {!isProcessing && processingStatus && (
+                  <div className="mt-3 p-3 bg-green-50 text-green-800 rounded-md">
+                    <p className="text-sm">{processingStatus}</p>
+                  </div>
+                )}
+                
+                {screenshots.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-sm font-medium mb-2">Selected Screenshots:</h4>
+                    <ul className="space-y-2">
+                      {screenshots.map((file: File, index: number) => (
+                        <li key={index} className="flex items-center justify-between p-2 bg-background rounded border border-accent/10">
+                          <span className="text-sm truncate max-w-[80%]">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeScreenshot(index)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
             
             <div className="flex justify-end">

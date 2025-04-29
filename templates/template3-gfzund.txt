@@ -1,0 +1,11 @@
+[Enter Job Folder Location]
+
+AFTER PDF APPROVAL:
+1. Save out PDF(s) without dies.
+ - Check to make sure the color space is correct
+2. Send to GF Device.
+ - [All Flatbeds / All Rolls]
+ - Material: [8oz / C1S / RTS / Busmark / Lightcal / Other]
+ - Special Instructions: Take to the Zund. See Zund hotfolder for the mounting specs PDF.
+3. Copy the dies and the PrintSpecs.PDF to the Zund hotfolder for GF to mount and cut.
+ - Print Specs Location: [Print Specs Location] 
