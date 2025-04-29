@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,8 +19,8 @@ const uploadSchema = z.object({
 type UploadFormData = z.infer<typeof uploadSchema>;
 
 export function ScreenshotUpload() {
-  const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   const {
     register,
@@ -33,7 +33,7 @@ export function ScreenshotUpload() {
   const onSubmit = async (data: UploadFormData) => {
     try {
       setIsUploading(true);
-      setProgress(0);
+      setUploadProgress(0);
 
       const formData = new FormData();
       formData.append('file', data.file);
@@ -64,7 +64,7 @@ export function ScreenshotUpload() {
       });
     } finally {
       setIsUploading(false);
-      setProgress(0);
+      setUploadProgress(0);
     }
   };
 
@@ -91,7 +91,7 @@ export function ScreenshotUpload() {
           </div>
           
           {isUploading && (
-            <Progress value={progress} className="w-full" />
+            <Progress value={uploadProgress} className="w-full" />
           )}
 
           <Button type="submit" disabled={isUploading}>
